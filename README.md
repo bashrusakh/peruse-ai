@@ -24,6 +24,37 @@
 
 ---
 
+## Demo
+
+![Peruse-AI in action](assets/peruse_ai_run.gif)
+
+The demo above shows a full `peruse run` session against the [USDA QuickStats Analytics](https://stats-usda.vercel.app/) dashboard using a local Gemma 3 model:
+
+```bash
+peruse run --url "https://stats-usda.vercel.app/" \
+           --task "Explore the main Dashboard and do a UI critique" \
+           --model "gemma3:12b" \
+           --reports "ux" \
+           --persona "A seasoned UX designer with 10+ year expertise in modern website design and UI" \
+           --extra-instructions "stick to the year 2021 and 2022"
+```
+
+The agent autonomously navigates the dashboard, captures screenshots at each step, and produces a structured [UX review report](assets/ux_review_ChatOllama_20260303_165425.md) covering visual hierarchy, WCAG accessibility, touch target sizes, information density, and design consistency.
+
+---
+
+## Architecture
+
+<p align="center">
+  <img src="assets/Peruse_AI_Architecture_Overview.png" alt="Peruse-AI Architecture Overview" width="900">
+</p>
+
+The pipeline follows six stages: **Entry** (CLI / Python API) &rarr; **Init** (load config, start VLM + browser) &rarr; **Perceive** (screenshot + DOM + error monitor) &rarr; **VLM Decide** (vision + DOM &rarr; JSON action) &rarr; **Act** (Playwright browser action) &rarr; **Reports** (Data Insights, UX Review, Bug Report). The Perceive&ndash;Act loop runs up to *N* steps with built-in loop detection and nudge recovery.
+
+> The interactive version of this diagram is available at [`assets/peruse_ai_flowchart_compact_mono.html`](assets/peruse_ai_flowchart_compact_mono.html) — open it locally in a browser.
+
+---
+
 ## Quickstart
 
 ### Prerequisites

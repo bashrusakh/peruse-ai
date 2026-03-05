@@ -32,6 +32,7 @@ htmlcov/
 # Output
 peruse_output/
 debug/
+peruse_feedback/
 
 #claude_output/
 *tmpclaude

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Peruse-AI — Architecture Overview</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet" />
+    <style>
+        :root {
+            /* Single accent: electric cyan — everything is a shade/tint/opacity of this */
+            --accent: #00e5ff;
+            /* full brightness — stage names, titles */
+            --accent-dim: #00b8cc;
+            /* 80% — borders, dots, hover glows */
+            --accent-muted: #007d8a;
+            /* 50% — chips, fg-label, pill gradient end */
+            --accent-ghost: rgba(0, 229, 255, 0.06);
+            /* subtle tinted fills */
+            --accent-glow: rgba(0, 229, 255, 0.18);
+
+            /* Neutrals */
+            --bg: #080d14;
+            --surface: #0e1520;
+            --border: #182230;
+            --text: #e5e9ee;
+            --muted: #c6ccd3;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 32px 24px 48px;
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 36px;
+            align-self: center;
+        }
+
+        .pill {
+            background: linear-gradient(135deg, var(--accent), var(--accent-muted));
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #080d14;
+            box-shadow: 0 0 18px var(--accent-glow);
+            letter-spacing: 0.3px;
+        }
+
+        .header h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 0.72rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        /* ── Arrows ── */
+        .arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0;
+            width: 36px;
+        }
+
+        .arrow-shaft {
+            width: 28px;
+            height: 2px;
+            background: linear-gradient(to right, var(--border), var(--accent-muted));
+        }
+
+        .arrow-tip {
+            width: 0;
+            height: 0;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 8px solid var(--accent-muted);
+            margin-left: -2px;
+        }
+
+        /* ── Stage card — same style for all, single accent ── */
+        .flow {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            flex-wrap: nowrap;
+            width: 100%;
+            max-width: 1100px;
+            justify-content: center;
+        }
+
+        .stage {
+            border-radius: 14px;
+            border: 1.5px solid var(--accent-muted);
+            background: var(--surface);
+            padding: 18px 16px 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            min-width: 0;
+            max-width: 160px;
+            text-align: center;
+            cursor: default;
+            transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+            box-shadow: 0 0 14px var(--accent-glow);
+        }
+
+        .stage:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent);
+            box-shadow: 0 0 28px rgba(0, 229, 255, 0.28);
+        }
+
+        /* Differentiate stages by border opacity steps */
+        .s-entry {
+            border-color: var(--accent);
+            box-shadow: 0 0 18px rgba(0, 229, 255, 0.22);
+        }
+
+        .s-init {
+            border-color: var(--accent-dim);
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.16);
+        }
+
+        .s-browse {
+            border-color: var(--accent-dim);
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.16);
+        }
+
+        .s-vlm {
+            border-color: var(--accent-dim);
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.16);
+        }
+
+        .s-act {
+            border-color: var(--accent-dim);
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.16);
+        }
+
+        .s-report {
+            border-color: var(--accent);
+            box-shadow: 0 0 18px rgba(0, 229, 255, 0.22);
+        }
+
+        .stage-icon {
+            font-size: 1.6rem;
+            line-height: 1;
+        }
+
+        .stage-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stage-desc {
+            font-size: 0.66rem;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        /* ── Loop arc ── */
+        .loop-wrap {
+            position: relative;
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            justify-content: center;
+            margin-top: 0;
+        }
+
+        .loop-arc-svg {
+            width: 58%;
+            height: 44px;
+            overflow: visible;
+        }
+
+        .loop-label {
+            text-anchor: middle;
+            fill: var(--accent-muted);
+            font-size: 10px;
+            font-family: Inter, sans-serif;
+        }
+
+        /* ── Focus group banner ── */
+        .fg-banner {
+            width: 100%;
+            max-width: 1100px;
+            border: 1px dashed var(--accent-muted);
+            border-radius: 12px;
+            background: var(--accent-ghost);
+            padding: 12px 22px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 24px;
+            font-size: 0.74rem;
+        }
+
+        .fg-icon {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .fg-label {
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 2px;
+            font-size: 0.76rem;
+        }
+
+        .fg-desc {
+            color: var(--muted);
+        }
+
+        .fg-personas {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .fg-chip {
+            border: 1px solid var(--accent-muted);
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 0.66rem;
+            color: var(--accent-dim);
+            background: rgba(0, 229, 255, 0.05);
+        }
+
+        /* ── Detail cards ── */
+        .details {
+            display: flex;
+            gap: 16px;
+            margin-top: 32px;
+            width: 100%;
+            max-width: 1100px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .detail-card {
+            border: 1px solid var(--border);
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 14px 18px;
+            flex: 1;
+            min-width: 180px;
+            max-width: 240px;
+        }
+
+        .dc-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            color: var(--accent);
+        }
+
+        .dc-item {
+            font-size: 0.68rem;
+            color: var(--muted);
+            padding: 3px 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dc-item:last-child {
+            border-bottom: none;
+        }
+
+        .dc-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: var(--accent-dim);
+        }
+
+        /* ── Tooltip ── */
+        [data-tip] {
+            position: relative;
+        }
+
+        [data-tip]:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #101c26;
+            border: 1px solid var(--accent-muted);
+            color: var(--accent);
+            font-size: 0.69rem;
+            padding: 6px 11px;
+            border-radius: 8px;
+            white-space: nowrap;
+            z-index: 100;
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(0, 229, 255, 0.15);
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <div class="pill">peruse-ai</div>
+        <div>
+            <h1>High-Level Architecture</h1>
+            <p>Local-first autonomous web agent · Playwright + Vision-Language Model</p>
+        </div>
+    </div>
+
+    <!-- Focus Group banner -->
+    <div class="fg-banner">
+        <div class="fg-icon">👥</div>
+        <div>
+            <div class="fg-label">Focus Group Mode</div>
+            <div class="fg-desc">Runs the full pipeline in parallel for each persona — each gets its own browser, VLM,
+                and output folder</div>
+        </div>
+        <div class="fg-personas">
+            <div class="fg-chip">🎨 UX Designer</div>
+            <div class="fg-chip">📊 Data Analyst</div>
+            <div class="fg-chip">🔍 QA Engineer</div>
+            <div class="fg-chip">+ any persona</div>
+        </div>
+    </div>
+
+    <!-- Main horizontal flow -->
+    <div class="flow">
+
+        <div class="stage s-entry" data-tip="peruse run · peruse scan · peruse focus-group · Python API">
+            <div class="stage-icon"></div>
+            <div class="stage-name">Entry</div>
+            <div class="stage-desc">CLI or Python API<br />URL + Task + Config</div>
+        </div>
+
+        <div class="arrow">
+            <div style="display:flex;align-items:center;">
+                <div class="arrow-shaft"></div>
+                <div class="arrow-tip"></div>
+            </div>
+        </div>
+
+        <div class="stage s-init"
+            data-tip="PeruseConfig from args / env vars / .env · VLM client init · Chromium launch">
+            <div class="stage-icon"></div>
+            <div class="stage-name">Init</div>
+            <div class="stage-desc">Load config<br />Start VLM + Browser</div>
+        </div>
+
+        <div class="arrow">
+            <div style="display:flex;align-items:center;">
+                <div class="arrow-shaft"></div>
+                <div class="arrow-tip"></div>
+            </div>
+        </div>
+
+        <div class="stage s-browse"
+            data-tip="Screenshot (PNG→JPEG 640px) + DOM element extraction + console/network error monitoring">
+            <div class="stage-icon"></div>
+            <div class="stage-name">Perceive</div>
+            <div class="stage-desc">Screenshot + DOM<br />+ Error monitor</div>
+        </div>
+
+        <div class="arrow">
+            <div style="display:flex;align-items:center;">
+                <div class="arrow-shaft"></div>
+                <div class="arrow-tip"></div>
+            </div>
+        </div>
+
+        <div class="stage s-vlm"
+            data-tip="Multimodal prompt → local VLM → JSON action · Retry with backoff on GPU crash · 5-strategy parse fallback">
+            <div class="stage-icon"></div>
+            <div class="stage-name">VLM Decide</div>
+            <div class="stage-desc">Vision + DOM → JSON<br />action · parse · retry</div>
+        </div>
+
+        <div class="arrow">
+            <div style="display:flex;align-items:center;">
+                <div class="arrow-shaft"></div>
+                <div class="arrow-tip"></div>
+            </div>
+        </div>
+
+        <div class="stage s-act" data-tip="click · type · scroll · navigate · select · wait · done — via Playwright">
+            <div class="stage-icon"></div>
+            <div class="stage-name">Act</div>
+            <div class="stage-desc">Browser action<br />via Playwright</div>
+        </div>
+
+        <div class="arrow">
+            <div style="display:flex;align-items:center;">
+                <div class="arrow-shaft"></div>
+                <div class="arrow-tip"></div>
+            </div>
+        </div>
+
+        <div class="stage s-report"
+            data-tip="VLM re-analyzes session screenshots → Data Insights · UX Review · Bug Report markdown files">
+            <div class="stage-icon"></div>
+            <div class="stage-name">Reports</div>
+            <div class="stage-desc">Insights · UX<br />Bug report</div>
+        </div>
+
+    </div>
+
+    <!-- Loop-back arc (SVG) -->
+    <div class="loop-wrap">
+        <svg class="loop-arc-svg" viewBox="0 0 600 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 490 4 Q 490 40 300 40 Q 110 40 110 4" stroke="#007d8a" stroke-width="1.5" stroke-dasharray="5 4"
+                fill="none" marker-start="url(#arr)" />
+            <text x="300" y="55" class="loop-label">↩ loop back — up to N steps · loop detection + nudge recovery</text>
+            <defs>
+                <marker id="arr" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                    <path d="M8,4 L0,1 L0,7 Z" fill="#007d8a" />
+                </marker>
+            </defs>
+        </svg>
+    </div>
+
+    <!-- Detail cards row -->
+    <div class="details">
+
+        <div class="detail-card">
+            <div class="dc-title">VLM Backends</div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>ollama (default)
+            </div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>lmstudio
+            </div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>openai_compat
+            </div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>jina (cloud)
+            </div>
+        </div>
+
+        <div class="detail-card">
+            <div class="dc-title">Perceive</div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>Full-page screenshot → JPEG 640px
+            </div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>DOM: tag, text, rect, href
+            </div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>Console + network error log
+            </div>
+        </div>
+
+        <div class="detail-card">
+            <div class="dc-title">Actions</div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>click · type · scroll
+            </div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>navigate · select · wait
+            </div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>done → exits loop
+            </div>
+        </div>
+
+        <div class="detail-card">
+            <div class="dc-title">Loop Recovery</div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>7 identical actions → nudge
+            </div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>&lt;2 unique in 12 steps → nudge
+            </div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>Max nudges → hard stop
+            </div>
+        </div>
+
+        <div class="detail-card">
+            <div class="dc-title">Reports</div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>📊 Data Insights
+            </div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>🎨 UX / UI Review
+            </div>
+            <div class="dc-item">
+                <div class="dc-dot"></div>🐛 Bug Report
+            </div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>
