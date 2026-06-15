@@ -2,10 +2,12 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/peruse-ai.svg)](https://pypi.org/project/peruse-ai/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/peruse-ai.svg)](https://pypi.org/project/peruse-ai/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Prodoorknob/peruse-ai/blob/master/LICENSE)
-[![GitHub](https://img.shields.io/badge/GitHub-Prodoorknob%2Fperuse--ai-blue?logo=github)](https://github.com/Prodoorknob/peruse-ai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bashrusakh/peruse-ai/blob/master/LICENSE)
+[![GitHub](https://img.shields.io/badge/GitHub-bashrusakh%2Fperuse--ai-blue?logo=github)](https://github.com/bashrusakh/peruse-ai)
 
 **A local-first universal web agent** that autonomously explores web applications and produces structured reports, powered by [Playwright](https://playwright.dev/python/) and a local Vision-Language Model (e.g. Qwen, Gemma via Ollama, LM Studio, or Jina VLM).
+
+> **Fork notice.** This is a fork of [Prodoorknob/peruse-ai](https://github.com/Prodoorknob/peruse-ai) (originally by rvedire). It adds first-class VLM API-key support (`--api-key`) and an [OpenCode UI-audit skill](#opencode-skill). Changes are developed here and proposed back upstream — see [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -68,8 +70,24 @@ The pipeline follows six stages: **Entry** (CLI / Python API) &rarr; **Init** (l
 
 ### Install
 
+The released package on PyPI:
+
 ```bash
 pip install peruse-ai
+playwright install chromium
+```
+
+To get this fork's latest changes (including the `--api-key` flag, before they land
+upstream), install from source instead:
+
+```bash
+# directly from the fork
+pip install "git+https://github.com/bashrusakh/peruse-ai"
+
+# or a development checkout
+git clone https://github.com/bashrusakh/peruse-ai.git
+cd peruse-ai
+pip install -e ".[dev]"
 playwright install chromium
 ```
 
@@ -89,6 +107,14 @@ peruse run --url "https://example.com/dashboard" \
 peruse run --url "https://example.com/dashboard" \
            --task "Review the dashboard" \
            --extra-instructions "Pay special attention to color contrast and WCAG compliance"
+
+# Against an authenticated / cloud OpenAI-compatible endpoint
+peruse run --url "https://example.com/dashboard" \
+           --task "Review the dashboard" \
+           --backend openai_compat \
+           --base-url "https://api.your-provider.com/v1" \
+           --model "your-vl-model" \
+           --api-key "$YOUR_API_KEY"
 
 # Bug scan only
 peruse scan --url "https://example.com" \
@@ -167,6 +193,7 @@ peruse run [OPTIONS]
 | `--model` | | `qwen3-vl:6b` | VLM model name |
 | `--backend` | | `ollama` | VLM backend: `ollama`, `lmstudio`, `openai_compat`, `jina` |
 | `--base-url` | | *(auto-detected)* | VLM API base URL |
+| `--api-key` | | *(none)* | VLM API key for backends that require auth (e.g. `openai_compat` cloud endpoints) |
 | `--output` | `-o` | `./peruse_output` | Output directory for reports and screenshots |
 | `--max-steps` | | `50` | Maximum agent loop iterations |
 | `--headless/--no-headless` | | `--headless` | Run browser in headless mode |
@@ -191,6 +218,7 @@ peruse scan [OPTIONS]
 | `--model` | | `qwen3-vl:6b` | VLM model name |
 | `--backend` | | `ollama` | VLM backend |
 | `--base-url` | | *(auto-detected)* | VLM API base URL |
+| `--api-key` | | *(none)* | VLM API key for backends that require auth |
 | `--output` | `-o` | `./peruse_output` | Output directory |
 | `--max-steps` | | `30` | Maximum steps for scan |
 | `--persona` | | *(none)* | Agent persona |
@@ -213,6 +241,7 @@ peruse focus-group [OPTIONS]
 | `--model` | | `qwen3-vl:6b` | VLM model name |
 | `--backend` | | `ollama` | VLM backend |
 | `--base-url` | | *(auto-detected)* | VLM API base URL |
+| `--api-key` | | *(none)* | VLM API key for backends that require auth |
 | `--output` | `-o` | `./peruse_output` | Base output directory (each persona gets a sub-directory) |
 | `--max-steps` | | `50` | Maximum agent iterations per persona |
 | `--headless/--no-headless` | | `--headless` | Run browsers in headless mode |
@@ -247,19 +276,21 @@ peruse check-vlm [OPTIONS]
 | `--model` | | `qwen3-vl:6b` | VLM model name |
 | `--backend` | | `ollama` | VLM backend |
 | `--base-url` | | *(auto-detected)* | VLM API base URL |
+| `--api-key` | | *(none)* | VLM API key for backends that require auth |
 | `--verbose` | `-v` | off | Enable debug logging |
 
 ---
 
 ## Configuration
 
-All settings can be passed via constructor, environment variables (`PERUSE_*`), or a `.env` file.
+All settings can be passed via constructor, environment variables (`PERUSE_*`), or a `.env` file. Explicit values (constructor kwargs / CLI flags) take priority over environment variables, which take priority over `.env`, which takes priority over defaults.
 
 | Setting | Env Var | Default | Description |
 |---|---|---|---|
 | `vlm_backend` | `PERUSE_VLM_BACKEND` | `"ollama"` | `"ollama"`, `"lmstudio"`, `"openai_compat"`, or `"jina"` |
 | `vlm_model` | `PERUSE_VLM_MODEL` | `"qwen3-vl:6b"` | Model identifier |
 | `vlm_base_url` | `PERUSE_VLM_BASE_URL` | `"http://localhost:11434"` | API endpoint |
+| `vlm_api_key` | `PERUSE_VLM_API_KEY` | *(none)* | API key for backends that require auth (`openai_compat`, `jina`) |
 | `vlm_num_ctx` | `PERUSE_VLM_NUM_CTX` | `32768` | Context window size (tokens) for Ollama |
 | `vlm_retries` | `PERUSE_VLM_RETRIES` | `2` | Retry attempts on VLM crash |
 | `vlm_cooldown` | `PERUSE_VLM_COOLDOWN` | `3.0` | Seconds to wait before retry |
@@ -271,6 +302,27 @@ All settings can be passed via constructor, environment variables (`PERUSE_*`), 
 | `extra_instructions` | `PERUSE_EXTRA_INSTRUCTIONS` | `""` | Additional instructions appended to the agent prompt |
 | `max_nudges` | `PERUSE_MAX_NUDGES` | `3` | Max nudge messages before hard-stopping on loops |
 | `max_report_screenshots` | `PERUSE_MAX_REPORT_SCREENSHOTS` | `10` | Max unique screenshots for VLM reports (0 = use all) |
+
+### VLM authentication
+
+Local backends (Ollama, LM Studio) need no key. For an authenticated OpenAI-compatible endpoint or the Jina VLM cloud backend, supply the key with the `--api-key` flag:
+
+```bash
+peruse run --url "https://example.com" --task "Explore" \
+           --backend openai_compat \
+           --base-url "https://api.your-provider.com/v1" \
+           --model "your-vl-model" \
+           --api-key "$YOUR_API_KEY"
+```
+
+Or via environment variable / `.env`:
+
+```bash
+export PERUSE_VLM_API_KEY="sk-..."
+peruse run --url "https://example.com" --task "Explore" --backend openai_compat
+```
+
+The flag takes priority over `PERUSE_VLM_API_KEY` when both are set.
 
 ### Persona
 
@@ -303,17 +355,22 @@ peruse run --url "https://example.com" \
 
 When the agent gets stuck repeating the same action, it receives a nudge message suggesting alternative approaches instead of immediately stopping. The `max_nudges` setting controls how many recovery attempts are allowed before the agent hard-stops (default: 3).
 
-```bash
-# Allow more recovery attempts
-peruse run --url "https://example.com" --task "Explore" \
-           PERUSE_MAX_NUDGES=5
-```
-
-Or in Python:
-
 ```python
 config = PeruseConfig(max_nudges=5)
 ```
+
+---
+
+## OpenCode skill
+
+This fork bundles an [OpenCode](https://opencode.ai/) skill, **`peruse-ui-check`**, under [`opencode-skill/`](opencode-skill/). It turns Peruse-AI into an iterative UI-audit loop: it runs `peruse run` against a local dev server, reads the generated reports and screenshots, builds a prioritized fix plan, applies code edits, and repeats for *N* iterations. It also supports a multi-model comparison mode that runs several VLMs over the same UI and merges their findings.
+
+```bash
+# install the skill (configures the VLM endpoint and dependencies)
+opencode-skill/install.sh
+```
+
+Then, in OpenCode, say `"run ui check"`. See [`opencode-skill/SKILL.md`](opencode-skill/SKILL.md) for the full workflow, parameters, and model-selection logic.
 
 ---
 
@@ -342,24 +399,27 @@ or an internal error (status code: 500)
 ## Development
 
 ```bash
-git clone https://github.com/rajas/peruse-ai.git
+git clone https://github.com/bashrusakh/peruse-ai.git
 cd peruse-ai
 pip install -e ".[dev]"
 playwright install chromium
 pytest tests/ -v
 ```
 
-To use the **Jina VLM** cloud backend, set your API key:
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the branch model, commit conventions, and how to propose changes upstream, and [`AGENTS.md`](AGENTS.md) for an architecture and module map.
+
+To use the **Jina VLM** cloud backend, pass your key with `--api-key` (or set `PERUSE_VLM_API_KEY`):
+
 ```bash
-# .env file
-PERUSE_VLM_API_KEY=jina_xxxxxxxxxxxx
-```
-```bash
-peruse run --url "https://example.com" --task "Explore" --backend jina
+peruse run --url "https://example.com" --task "Explore" --backend jina --api-key "jina_xxxxxxxxxxxx"
 ```
 
 ---
 
+## Credits
+
+A fork of [Prodoorknob/peruse-ai](https://github.com/Prodoorknob/peruse-ai) by rvedire. Thanks to the upstream author for the original project.
+
 ## License
 
-MIT
+MIT — see [`LICENSE`](LICENSE).

@@ -81,6 +81,7 @@ def main():
 @click.option("--model", default="qwen3-vl:6b", help="VLM model name.")
 @click.option("--backend", default="ollama", type=click.Choice(["ollama", "lmstudio", "openai_compat", "jina"]))
 @click.option("--base-url", default=None, help="VLM API base URL (auto-detected for ollama/lmstudio).")
+@click.option("--api-key", default=None, help="VLM API key (for openai_compat backends that require auth).")
 @click.option("--output", "-o", default="./peruse_output", help="Output directory for reports and screenshots.", type=click.Path())
 @click.option("--max-steps", default=50, help="Maximum agent loop iterations.", type=int)
 @click.option("--headless/--no-headless", default=True, help="Run browser headless.")
@@ -89,15 +90,15 @@ def main():
 @click.option("--extra-instructions", default="", help="Additional instructions appended to the agent prompt.")
 @click.option("--max-report-screenshots", default=10, help="Max unique screenshots for VLM reports (0 = use all).", type=int)
 @click.option("--verbose", "-v", is_flag=True, help="Enable debug logging.")
-def run(url, task, model, backend, base_url, output, max_steps, headless, reports, persona, extra_instructions, max_report_screenshots, verbose):
+def run(url, task, model, backend, base_url, api_key, output, max_steps, headless, reports, persona, extra_instructions, max_report_screenshots, verbose):
     """Run a full exploration session and generate all reports."""
     _setup_logging(verbose)
     gen_insights, gen_ux, gen_bugs = _parse_reports(reports)
-    asyncio.run(_run_agent(url, task, model, backend, base_url, output, max_steps, headless,
+    asyncio.run(_run_agent(url, task, model, backend, base_url, api_key, output, max_steps, headless,
                            gen_insights, gen_ux, gen_bugs, persona, extra_instructions, max_report_screenshots))
 
 
-async def _run_agent(url, task, model, backend, base_url, output, max_steps, headless,
+async def _run_agent(url, task, model, backend, base_url, api_key, output, max_steps, headless,
                      gen_insights, gen_ux, gen_bugs, persona="", extra_instructions="",
                      max_report_screenshots=10):
     """Internal async handler for the run command."""
@@ -119,6 +120,8 @@ async def _run_agent(url, task, model, backend, base_url, output, max_steps, hea
     }
     if base_url:
         config_kwargs["vlm_base_url"] = base_url
+    if api_key:
+        config_kwargs["vlm_api_key"] = api_key
     if persona:
         config_kwargs["persona"] = persona
     if extra_instructions:
@@ -195,18 +198,19 @@ async def _run_agent(url, task, model, backend, base_url, output, max_steps, hea
 @click.option("--model", default="qwen3-vl:6b", help="VLM model name.")
 @click.option("--backend", default="ollama", type=click.Choice(["ollama", "lmstudio", "openai_compat", "jina"]))
 @click.option("--base-url", default=None, help="VLM API base URL.")
+@click.option("--api-key", default=None, help="VLM API key (for openai_compat backends that require auth).")
 @click.option("--output", "-o", default="./peruse_output", help="Output directory for reports and screenshots.", type=click.Path())
 @click.option("--max-steps", default=30, help="Maximum steps for scan.", type=int)
 @click.option("--persona", default="", help="Agent persona prepended to the system prompt (e.g. 'a QA engineer').")
 @click.option("--extra-instructions", default="", help="Additional instructions appended to the agent prompt.")
 @click.option("--verbose", "-v", is_flag=True, help="Enable debug logging.")
-def scan(url, task, model, backend, base_url, output, max_steps, persona, extra_instructions, verbose):
+def scan(url, task, model, backend, base_url, api_key, output, max_steps, persona, extra_instructions, verbose):
     """Run a lightweight bug scan (bug report only, no VLM analysis)."""
     _setup_logging(verbose)
-    asyncio.run(_scan_agent(url, task, model, backend, base_url, output, max_steps, persona, extra_instructions))
+    asyncio.run(_scan_agent(url, task, model, backend, base_url, api_key, output, max_steps, persona, extra_instructions))
 
 
-async def _scan_agent(url, task, model, backend, base_url, output, max_steps, persona="", extra_instructions=""):
+async def _scan_agent(url, task, model, backend, base_url, api_key, output, max_steps, persona="", extra_instructions=""):
     """Internal async handler for the scan command."""
     from peruse_ai.agent import PeruseAgent
     from peruse_ai.config import PeruseConfig, VLMBackend
@@ -224,6 +228,8 @@ async def _scan_agent(url, task, model, backend, base_url, output, max_steps, pe
     }
     if base_url:
         config_kwargs["vlm_base_url"] = base_url
+    if api_key:
+        config_kwargs["vlm_api_key"] = api_key
     if persona:
         config_kwargs["persona"] = persona
     if extra_instructions:
@@ -270,14 +276,15 @@ async def _scan_agent(url, task, model, backend, base_url, output, max_steps, pe
 @click.option("--model", default="qwen3-vl:6b", help="VLM model name.")
 @click.option("--backend", default="ollama", type=click.Choice(["ollama", "lmstudio", "openai_compat", "jina"]))
 @click.option("--base-url", default=None, help="VLM API base URL.")
+@click.option("--api-key", default=None, help="VLM API key (for openai_compat backends that require auth).")
 @click.option("--verbose", "-v", is_flag=True, help="Enable debug logging.")
-def check_vlm(model, backend, base_url, verbose):
+def check_vlm(model, backend, base_url, api_key, verbose):
     """Check VLM backend connectivity and model availability."""
     _setup_logging(verbose)
-    asyncio.run(_check_vlm(model, backend, base_url))
+    asyncio.run(_check_vlm(model, backend, base_url, api_key))
 
 
-async def _check_vlm(model, backend, base_url):
+async def _check_vlm(model, backend, base_url, api_key):
     """Internal async handler for check-vlm."""
     from peruse_ai.config import PeruseConfig, VLMBackend
     from peruse_ai.vlm import check_vlm_connection
@@ -291,6 +298,8 @@ async def _check_vlm(model, backend, base_url):
     }
     if base_url:
         config_kwargs["vlm_base_url"] = base_url
+    if api_key:
+        config_kwargs["vlm_api_key"] = api_key
 
     config = PeruseConfig(**config_kwargs)
 
@@ -339,6 +348,7 @@ def _load_personas(personas_str: str) -> list[str]:
 @click.option("--backend", default="ollama",
               type=click.Choice(["ollama", "lmstudio", "openai_compat", "jina"]))
 @click.option("--base-url", default=None, help="VLM API base URL.")
+@click.option("--api-key", default=None, help="VLM API key (for openai_compat backends that require auth).")
 @click.option("--output", "-o", default="./peruse_output",
               help="Base output directory. Each persona gets a sub-directory.",
               type=click.Path())
@@ -351,7 +361,7 @@ def _load_personas(personas_str: str) -> list[str]:
 @click.option("--max-report-screenshots", default=10,
               help="Max unique screenshots for VLM reports (0 = use all).", type=int)
 @click.option("--verbose", "-v", is_flag=True, help="Enable debug logging.")
-def focus_group(url, task, personas, model, backend, base_url, output, max_steps,
+def focus_group(url, task, personas, model, backend, base_url, api_key, output, max_steps,
                 headless, reports, extra_instructions, max_report_screenshots, verbose):
     """Run a focus group: multiple personas explore the same URL concurrently."""
     _setup_logging(verbose)
@@ -362,13 +372,13 @@ def focus_group(url, task, personas, model, backend, base_url, output, max_steps
 
     gen_insights, gen_ux, gen_bugs = _parse_reports(reports)
     asyncio.run(_focus_group_handler(
-        url, task, persona_list, model, backend, base_url, output,
+        url, task, persona_list, model, backend, base_url, api_key, output,
         max_steps, headless, extra_instructions,
         gen_insights, gen_ux, gen_bugs, max_report_screenshots,
     ))
 
 
-async def _focus_group_handler(url, task, personas, model, backend, base_url,
+async def _focus_group_handler(url, task, personas, model, backend, base_url, api_key,
                                 output, max_steps, headless, extra_instructions,
                                 gen_insights, gen_ux, gen_bugs,
                                 max_report_screenshots=10):
@@ -388,6 +398,8 @@ async def _focus_group_handler(url, task, personas, model, backend, base_url,
     }
     if base_url:
         config_kwargs["vlm_base_url"] = base_url
+    if api_key:
+        config_kwargs["vlm_api_key"] = api_key
     if extra_instructions:
         config_kwargs["extra_instructions"] = extra_instructions
 
