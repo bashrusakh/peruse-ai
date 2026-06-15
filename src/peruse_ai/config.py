@@ -109,7 +109,8 @@ class PeruseConfig(BaseSettings):
         default=80,
         ge=10,
         le=100,
-        description="JPEG quality for saved screenshots (10-100).",
+        description="JPEG quality (10-100) for screenshots sent to the VLM during inference. "
+        "Saved screenshots are always raw PNG. Lower values reduce VLM token usage.",
     )
     extra_instructions: str = Field(
         default="",

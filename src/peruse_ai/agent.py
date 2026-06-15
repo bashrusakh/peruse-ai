@@ -10,6 +10,7 @@ import asyncio
 import json
 import io
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -131,7 +132,7 @@ async def execute_action(page, action: dict, dom_elements: list[dict]) -> None:
         direction = action.get("direction", "down")
         delta = -400 if direction == "up" else 400
         logger.info("Scrolling %s", direction)
-        await page.mouse.wheel(0, delta)
+        await page.evaluate(f"window.scrollBy(0, {delta})")
         await page.wait_for_timeout(800)
 
     elif action_type == "select":
@@ -280,8 +281,6 @@ def parse_vlm_response(raw_response: str) -> dict:
     text = raw_response.strip()
 
     # --- Strategy 1: Strip markdown code fences ---
-    import re
-
     # Remove ```json ... ``` or ``` ... ``` blocks
     fenced = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", text, re.DOTALL)
     if fenced:

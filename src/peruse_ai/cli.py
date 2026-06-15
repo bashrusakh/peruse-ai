@@ -64,7 +64,7 @@ def _parse_reports(reports_str: str) -> tuple[bool, bool, bool]:
 
 
 @click.group()
-@click.version_option(version="0.1.0", prog_name="peruse-ai")
+@click.version_option(package_name="peruse-ai", prog_name="peruse-ai")
 def main():
     """Peruse-AI -- Autonomous web exploration agent powered by local VLMs."""
     pass

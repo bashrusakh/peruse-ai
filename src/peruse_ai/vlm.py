@@ -204,11 +204,17 @@ def build_vision_prompt(
     Returns:
         A list of LangChain message objects ready for model.invoke().
     """
-    # Build the system prompt with optional persona prefix and extra instructions suffix
-    system_content = ""
+    # Build the system prompt with optional persona and extra instructions.
+    # When a persona is set, replace the opening "You are a web browsing agent."
+    # sentence to avoid the redundant "You are X. You are a web browsing agent." pattern.
     if persona:
-        system_content = f"You are {persona}. "
-    system_content += AGENT_SYSTEM_PROMPT
+        system_content = AGENT_SYSTEM_PROMPT.replace(
+            "You are a web browsing agent.",
+            f"You are {persona}, acting as a web browsing agent.",
+            1,
+        )
+    else:
+        system_content = AGENT_SYSTEM_PROMPT
     if extra_instructions:
         system_content += f"\n\nAdditional Instructions:\n{extra_instructions}"
     messages = [SystemMessage(content=system_content)]
