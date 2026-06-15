@@ -41,6 +41,11 @@ read -rp "  Model name    [${PERUSE_VLM_MODEL:-}]: " input_model
 [ -n "$input_model" ] && PERUSE_VLM_MODEL="$input_model"
 [ -n "${PERUSE_VLM_MODEL:-}" ] || die "Model name is required."
 
+# Optional — only needed for cloud/openai_compat endpoints that require auth.
+read -rsp "  API key       [leave blank for none]: " input_key
+echo ""
+[ -n "$input_key" ] && PERUSE_VLM_API_KEY="$input_key"
+
 echo ""
 
 # ── write ~/.peruse-ui.env ────────────────────────────────────────────────────
@@ -59,6 +64,8 @@ PERUSE_VLM_MODEL=${PERUSE_VLM_MODEL}
 # PERUSE_MAX_STEPS=30
 # PERUSE_HEADLESS=true
 EOF
+# Append API key only when set — keeps the file clean for local/no-auth backends.
+[ -n "${PERUSE_VLM_API_KEY:-}" ] && echo "PERUSE_VLM_API_KEY=${PERUSE_VLM_API_KEY}" >> "$ENV_FILE"
 success "Config written → ${ENV_FILE}"
 
 # ── install skill ─────────────────────────────────────────────────────────────
@@ -72,7 +79,12 @@ info "Checking dependencies..."
 
 if ! pip show peruse-ai &>/dev/null; then
     info "Installing peruse-ai..."
-    pip install peruse-ai --break-system-packages -q && success "peruse-ai installed"
+    # --break-system-packages isn't supported on older pip — fall back without it.
+    if pip install peruse-ai -q --break-system-packages 2>/dev/null || pip install peruse-ai -q; then
+        success "peruse-ai installed"
+    else
+        die "Failed to install peruse-ai"
+    fi
 else
     success "peruse-ai already installed ($(pip show peruse-ai | grep Version | cut -d' ' -f2))"
 fi
@@ -87,9 +99,9 @@ else
 fi
 
 info "Installing playwright chromium..."
-if playwright install chromium &>/dev/null 2>&1; then
+if playwright install chromium &>/dev/null; then
     success "playwright chromium ready"
-elif python -m playwright install chromium &>/dev/null 2>&1; then
+elif python -m playwright install chromium &>/dev/null; then
     success "playwright chromium ready (via python -m)"
 else
     warn "playwright chromium install failed — run manually: playwright install chromium"
@@ -101,7 +113,8 @@ info "Testing VLM connectivity..."
 if peruse check-vlm \
     --backend openai_compat \
     --base-url "$PERUSE_VLM_BASE_URL" \
-    --model "$PERUSE_VLM_MODEL" 2>/dev/null; then
+    --model "$PERUSE_VLM_MODEL" \
+    ${PERUSE_VLM_API_KEY:+--api-key "$PERUSE_VLM_API_KEY"} 2>/dev/null; then
     success "VLM endpoint reachable"
 else
     warn "VLM connectivity check failed — endpoint may be offline or model name incorrect"

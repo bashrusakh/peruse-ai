@@ -101,6 +101,10 @@ If no VL models found — show all available models, warn that vision may not wo
 If OpenCode config is missing — fall back to `~/.peruse-ui.env`:
 ```bash
 [ -f "$HOME/.peruse-ui.env" ] && source "$HOME/.peruse-ui.env"
+# Bridge the env-file names to the variables STEP 2 uses:
+MODEL_ID="${PERUSE_VLM_MODEL:-}"
+BASE_URL="${PERUSE_VLM_BASE_URL:-}"
+API_KEY="${PERUSE_VLM_API_KEY:-}"
 ```
 
 ### 0-E. Resolve baseURL and API key per selected model
@@ -116,7 +120,7 @@ Store as: `MODEL_ID`, `BASE_URL`, `API_KEY` per entry.
 
 ```bash
 # 1. peruse-ai package installed? (CLI entry point is "peruse", not "peruse-ai")
-pip show peruse-ai 2>/dev/null || pip install peruse-ai --break-system-packages
+pip show peruse-ai 2>/dev/null || pip install peruse-ai --break-system-packages 2>/dev/null || pip install peruse-ai
 
 # 2. playwright chromium available?
 playwright install chromium 2>/dev/null || python -m playwright install chromium 2>/dev/null || true
@@ -139,15 +143,17 @@ If dev server returns non-200 or connection refused:
 ## STEP 2 — Run peruse
 
 **Note:** The CLI command is `peruse run`, not `peruse-ai`.
-peruse-ai reads config from env vars: `PERUSE_VLM_BACKEND`, `PERUSE_VLM_BASE_URL`, `PERUSE_VLM_MODEL`.
+Pass model/backend/endpoint as explicit flags (below). They take priority over any `PERUSE_VLM_*`
+env vars, so the CLI's built-in defaults (`ollama` / `qwen3-vl:6b`) never shadow your selection.
 
 ### Single-model mode
 
 ```bash
-PERUSE_VLM_BACKEND=openai_compat \
-PERUSE_VLM_BASE_URL="$LLM_BASE_URL" \
-PERUSE_VLM_MODEL="$LLM_MODEL" \
 peruse run \
+  --backend openai_compat \
+  --model "$MODEL_ID" \
+  --base-url "$BASE_URL" \
+  ${API_KEY:+--api-key "$API_KEY"} \
   --url "$URL" \
   --task "$TASK" \
   --reports ux \
@@ -167,10 +173,11 @@ for entry in "${SELECTED_MODELS[@]}"; do
 
   SAFE_MODEL_ID="${MODEL_ID//\//_}"   # replace / with _ for dir name
 
-  PERUSE_VLM_BACKEND=openai_compat \
-  PERUSE_VLM_BASE_URL="$BASE_URL" \
-  PERUSE_VLM_MODEL="$MODEL_ID" \
   peruse run \
+    --backend openai_compat \
+    --model "$MODEL_ID" \
+    --base-url "$BASE_URL" \
+    ${API_KEY:+--api-key "$API_KEY"} \
     --url "$URL" \
     --task "$TASK" \
     --reports ux \
@@ -193,8 +200,7 @@ ls -la "$OUTPUT_DIR/[model_dir]/run_${ITERATION}/"
 
 Expected files:
 - `ux_review_*.md` — UX report (main analysis file)
-- `*.json` — structured data
-- `screenshots/` or `screenshot_*.png` — visual captures
+- `screenshots/step_*.png` — visual captures (one per unique step)
 
 Read each file. View screenshots visually (you are multimodal).
 
@@ -318,10 +324,12 @@ Best model for this codebase: [model with highest agreement + most unique valid 
 - [list]
 
 ### Manual verification command
-PERUSE_VLM_BACKEND=openai_compat \
-PERUSE_VLM_BASE_URL=$LLM_BASE_URL \
-PERUSE_VLM_MODEL=$LLM_MODEL \
-peruse run --url $URL --task "..." --reports ux --output ./peruse_output/final
+peruse run \
+  --backend openai_compat \
+  --model "$MODEL_ID" \
+  --base-url "$BASE_URL" \
+  ${API_KEY:+--api-key "$API_KEY"} \
+  --url "$URL" --task "..." --reports ux --output ./peruse_output/final
 ```
 
 ---
