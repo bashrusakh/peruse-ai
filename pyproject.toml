@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "peruse-ai"
-version = "0.1.0"
+version = "0.2.0"
 description = "A local-first universal web agent that autonomously explores web apps using browser-use, Playwright, and a local Vision-Language Model."
 readme = "README.md"
 license = {text = "MIT"}
